@@ -42,6 +42,7 @@ extern int32_t vibro_test_app(void* p);
 
 // Plugins
 extern int32_t music_player_app(void* p);
+extern int32_t music_midi_app(void* p);
 extern int32_t snake_game_app(void* p);
 
 // On system start hooks declaration
@@ -152,6 +153,9 @@ const FlipperApplication FLIPPER_APPS[] = {
     {.app = bad_usb_app, .name = "Bad USB", .stack_size = 2048, .icon = &A_BadUsb_14},
 #endif
 
+#ifdef APP_MUSIC_MIDI
+    {.app = music_midi_app, .name = "Music Midi", .stack_size = 1024, .icon = &A_Plugins_14},
+#endif
 };
 
 const size_t FLIPPER_APPS_COUNT = sizeof(FLIPPER_APPS) / sizeof(FlipperApplication);

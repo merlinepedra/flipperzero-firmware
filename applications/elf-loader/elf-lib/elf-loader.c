@@ -1,6 +1,5 @@
 #include "elf-loader.h"
 #include "elf.h"
-#include "../elf-loader-sys-api.h"
 #include <furi.h>
 #include <string.h>
 
@@ -10,6 +9,11 @@
 #define TAG "elf-loader"
 
 #ifndef DOX
+
+/**
+ * Callable elf entry type
+ */
+typedef void(entry_t)(void);
 
 typedef struct {
     void* data;
@@ -416,7 +420,7 @@ static int relocate_sections(ELFExec_t* e) {
 }
 
 #define APP_STACK_SIZE 2048
-void arch_jump_to(entry_t entry) {
+static void arch_jump_to(entry_t entry) {
     void* stack = aligned_malloc(APP_STACK_SIZE, 8);
 
     register uint32_t saved = 0;

@@ -1,7 +1,6 @@
 #pragma once
 #include "dialogs.h"
 #include "dialogs_message.h"
-#include "view_holder.h"
 
 #ifdef __cplusplus
 extern "C" {

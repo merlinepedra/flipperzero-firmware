@@ -1,5 +1,6 @@
 #include "dialogs_i.h"
 #include "dialogs_api_lock.h"
+#include <gui/view_holder.h>
 #include <gui/modules/dialog_ex.h>
 
 typedef struct {

@@ -1,6 +1,7 @@
 #include "dialogs_i.h"
 #include "dialogs_api_lock.h"
 #include <gui/modules/file_select.h>
+#include <gui/view_holder.h>
 
 typedef struct {
     FuriApiLock lock;

@@ -58,9 +58,9 @@ StorageStatus storage_data_status(StorageData* storage) {
     return status;
 }
 
-const char* storage_data_status_text(StorageData* storage) {
+const char* storage_data_status_text(StorageStatus status) {
     const char* result = "unknown";
-    switch(storage->status) {
+    switch(status) {
     case StorageStatusOK:
         result = "ok";
         break;

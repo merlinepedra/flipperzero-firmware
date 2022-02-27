@@ -43,7 +43,7 @@ void storage_data_init(StorageData* storage);
 bool storage_data_lock(StorageData* storage);
 bool storage_data_unlock(StorageData* storage);
 StorageStatus storage_data_status(StorageData* storage);
-const char* storage_data_status_text(StorageData* storage);
+const char* storage_data_status_text(StorageStatus status);
 
 LIST_DEF(
     StorageFileList,

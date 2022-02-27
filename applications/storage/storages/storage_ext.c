@@ -4,6 +4,8 @@
 #include <furi_hal.h>
 #include "sd_notify.h"
 #include <furi_hal_sd.h>
+#include <gui/view_holder.h>
+#include <gui/modules/popup.h>
 
 typedef FIL SDFile;
 typedef DIR SDDir;
@@ -22,14 +24,46 @@ typedef struct {
 
 static FS_Error storage_ext_parse_error(SDError error);
 
+typedef struct {
+    Gui* gui;
+    ViewHolder* view_holder;
+    Popup* popup;
+} StorageMessage;
+
 /******************* Core Functions *******************/
+
+static StorageMessage* storage_ext_message_alloc() {
+    StorageMessage* message = malloc(sizeof(StorageMessage));
+    message->gui = furi_record_open("gui");
+    message->view_holder = view_holder_alloc();
+    message->popup = popup_alloc();
+    popup_set_text(
+        message->popup, "SD card takes\na long time\nto mount", 88, 32, AlignCenter, AlignCenter);
+    popup_set_icon(message->popup, 5, 6, &I_SDQuestion_35x43);
+    view_holder_attach_to_gui(message->view_holder, message->gui);
+    view_holder_set_view(message->view_holder, popup_get_view(message->popup));
+    return message;
+}
+
+static void storage_ext_message_free(StorageMessage* message) {
+    view_holder_stop(message->view_holder);
+    view_holder_free(message->view_holder);
+    popup_free(message->popup);
+    free(message);
+    furi_record_close("gui");
+}
+
+static void storage_ext_message_start(StorageMessage* message) {
+    view_holder_start(message->view_holder);
+}
 
 static bool sd_mount_card(StorageData* storage, bool notify) {
     bool result = false;
-    const uint8_t max_init_counts = 10;
+    const uint8_t max_init_counts = 4;
     uint8_t counter = max_init_counts;
     uint8_t bsp_result;
     SDData* sd_data = storage->data;
+    StorageMessage* message = storage_ext_message_alloc();
 
     storage_data_lock(storage);
 
@@ -38,6 +72,11 @@ static bool sd_mount_card(StorageData* storage, bool notify) {
             NotificationApp* notification = furi_record_open("notification");
             sd_notify_wait(notification);
             furi_record_close("notification");
+        }
+
+        if(counter == max_init_counts - 1) {
+            storage_ext_message_start(message);
+            delay(100);
         }
 
         if((counter % 2) == 0) {
@@ -84,12 +123,17 @@ static bool sd_mount_card(StorageData* storage, bool notify) {
         if(!result) {
             delay(1000);
             FURI_LOG_E(
-                TAG, "init cycle %d, error: %s", counter, storage_data_status_text(storage));
+                TAG,
+                "init cycle %d, error: %s",
+                counter,
+                storage_data_status_text(storage->status));
             counter--;
         }
     }
 
     storage_data_unlock(storage);
+
+    storage_ext_message_free(message);
 
     return result;
 }
@@ -184,7 +228,7 @@ static void storage_ext_tick_internal(StorageData* storage, bool notify) {
             sd_mount_card(storage, notify);
 
             if(storage->status != StorageStatusOK) {
-                FURI_LOG_E(TAG, "sd init error: %s", storage_data_status_text(storage));
+                FURI_LOG_E(TAG, "sd init error: %s", storage_data_status_text(storage->status));
                 if(notify) {
                     NotificationApp* notification = furi_record_open("notification");
                     sd_notify_error(notification);
@@ -542,7 +586,4 @@ void storage_ext_init(StorageData* storage) {
     storage->fs_api.common.fs_info = storage_ext_common_fs_info;
 
     hal_sd_detect_init();
-
-    // do not notify on first launch, notifications app is waiting for our thread to read settings
-    storage_ext_tick_internal(storage, false);
 }

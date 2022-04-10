@@ -82,6 +82,11 @@ typedef struct {
     FuriHalNfcTxRxType tx_rx_type;
 } FuriHalNfcTxRxContext;
 
+/** Dump registers
+ * TODO delete from public API
+ */
+void furi_hal_nfc_dump_regs();
+
 /** Init nfc
  */
 void furi_hal_nfc_init();

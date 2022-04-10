@@ -26,6 +26,26 @@ void furi_hal_nfc_init() {
     }
 }
 
+void furi_hal_nfc_dump_regs() {
+    t_st25r3916Regs regs;
+    ReturnCode ret = st25r3916GetRegsDump(&regs);
+    if(ret) {
+        FURI_LOG_E(TAG, "Can't read regs");
+    } else {
+        FURI_LOG_W(TAG, "READ_REG_OK");
+    }
+    FURI_LOG_I(TAG, "A REGS:");
+    for(size_t i = 0; i < sizeof(regs.RsA); i++) {
+        printf("%02X ", regs.RsA[i]);
+    }
+    printf("\r\n");
+    FURI_LOG_I(TAG, "B REGS:");
+    for(size_t i = 0; i < sizeof(regs.RsB); i++) {
+        printf("%02X ", regs.RsB[i]);
+    }
+    printf("\r\n");
+}
+
 bool furi_hal_nfc_is_busy() {
     return rfalNfcGetState() != RFAL_NFC_STATE_IDLE;
 }

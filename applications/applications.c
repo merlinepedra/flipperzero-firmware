@@ -46,6 +46,7 @@ extern int32_t battery_test_app(void* p);
 // Plugins
 extern int32_t music_player_app(void* p);
 extern int32_t snake_game_app(void* p);
+extern int32_t raycast_game_app(void* p);
 
 // On system start hooks declaration
 extern void bt_on_system_start();
@@ -216,6 +217,10 @@ const FlipperApplication FLIPPER_PLUGINS[] = {
 
 #ifdef APP_SNAKE_GAME
     {.app = snake_game_app, .name = "Snake Game", .stack_size = 1024, .icon = &A_Plugins_14},
+#endif
+
+#ifdef APP_RAYCAST_GAME
+    {.app = raycast_game_app, .name = "Raycast Game", .stack_size = 4096, .icon = &A_Plugins_14},
 #endif
 };
 

@@ -314,6 +314,17 @@ uint8_t mf_classic_read_card(
 bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx) {
     furi_assert(tx_rx);
 
-    FURI_LOG_W(TAG, "Zdarov");
+    tx_rx->tx_data[0] = 0x01;
+    tx_rx->tx_data[1] = 0x02;
+    tx_rx->tx_bits = 16;
+    tx_rx->tx_rx_type = FuriHalNfcTxRxTypeDefault;
+    furi_hal_nfc_tx_rx(tx_rx, 5000);
+
+    tx_rx->tx_data[0] = 0x04;
+    tx_rx->tx_data[1] = 0x05;
+    tx_rx->tx_bits = 16;
+    tx_rx->tx_rx_type = FuriHalNfcTxRxTypeDefault;
+    furi_hal_nfc_tx_rx(tx_rx, 5000);
+
     return false;
 }

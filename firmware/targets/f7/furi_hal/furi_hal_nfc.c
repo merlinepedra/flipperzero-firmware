@@ -273,16 +273,17 @@ bool furi_hal_nfc_emulate_nfca(
     uint32_t data_type = FURI_HAL_NFC_TXRX_DEFAULT;
 
     rfalLowPowerModeStop();
-    if(rfalListenStart(
-           RFAL_LM_MASK_NFCA,
-           &config,
-           NULL,
-           NULL,
-           buff_rx,
-           rfalConvBytesToBits(buff_rx_size),
-           &buff_rx_len)) {
+    ReturnCode r = rfalListenStart(
+        RFAL_LM_MASK_NFCA,
+        &config,
+        NULL,
+        NULL,
+        buff_rx,
+        rfalConvBytesToBits(buff_rx_size),
+        &buff_rx_len);
+    if(r) {
         rfalListenStop();
-        FURI_LOG_E(TAG, "Failed to start listen mode");
+        FURI_LOG_E(TAG, "Failed to start listen mode: %d", r);
         return false;
     }
     while(true) {

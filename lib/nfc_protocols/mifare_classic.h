@@ -100,3 +100,5 @@ uint8_t mf_classic_read_card(
     FuriHalNfcTxRxContext* tx_rx,
     MfClassicReader* reader,
     MfClassicData* data);
+
+bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx);

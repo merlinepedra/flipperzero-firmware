@@ -104,6 +104,8 @@ int32_t nfc_worker_task(void* context) {
         nfc_worker_emulate_mifare_ul(nfc_worker);
     } else if(nfc_worker->state == NfcWorkerStateReadMifareClassic) {
         nfc_worker_mifare_classic_dict_attack(nfc_worker);
+    } else if(nfc_worker->state == NfcWorkerStateEmulateMifareClassic) {
+        nfc_worker_emulate_mifare_classic(nfc_worker);
     } else if(nfc_worker->state == NfcWorkerStateReadMifareDesfire) {
         nfc_worker_read_mifare_desfire(nfc_worker);
     }
@@ -327,6 +329,21 @@ void nfc_worker_emulate_mifare_ul(NfcWorker* nfc_worker) {
                 nfc_worker->callback(NfcWorkerEventSuccess, nfc_worker->context);
             }
             emulator.data_changed = false;
+        }
+    }
+}
+
+void nfc_worker_emulate_mifare_classic(NfcWorker* nfc_worker) {
+    uint8_t uid_len = 7;
+    uint8_t sak = 0x08;
+    uint8_t uid[] = {0x04, 0x30, 0x42, 0x1A, 0x8A, 0x44, 0x80};
+    uint8_t atqa[] = {0x44, 0x00};
+
+    FuriHalNfcTxRxContext tx_rx;
+
+    while(nfc_worker->state == NfcWorkerStateEmulateMifareClassic) {
+        if(furi_hal_nfc_listen(uid, uid_len, atqa, sak, true, 4000)) {
+            mf_classic_emulator(&tx_rx);
         }
     }
 }

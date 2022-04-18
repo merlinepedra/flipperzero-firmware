@@ -310,3 +310,10 @@ uint8_t mf_classic_read_card(
 
     return sectors_read;
 }
+
+bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx) {
+    furi_assert(tx_rx);
+
+    FURI_LOG_W(TAG, "Zdarov");
+    return false;
+}

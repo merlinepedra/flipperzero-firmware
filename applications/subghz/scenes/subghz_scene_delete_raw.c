@@ -6,10 +6,10 @@ void subghz_scene_delete_raw_callback(GuiButtonType result, InputType type, void
     SubGhz* subghz = context;
     if((result == GuiButtonTypeRight) && (type == InputTypeShort)) {
         view_dispatcher_send_custom_event(
-            subghz->view_dispatcher, SubghzCustomEventSceneDeleteRAW);
+            subghz->view_dispatcher, SubGhzCustomEventSceneDeleteRAW);
     } else if((result == GuiButtonTypeLeft) && (type == InputTypeShort)) {
         view_dispatcher_send_custom_event(
-            subghz->view_dispatcher, SubghzCustomEventSceneDeleteRAWBack);
+            subghz->view_dispatcher, SubGhzCustomEventSceneDeleteRAWBack);
     }
 }
 
@@ -24,7 +24,7 @@ void subghz_scene_delete_raw_on_enter(void* context) {
     char delete_str[64];
     snprintf(delete_str, sizeof(delete_str), "\e#Delete %s?\e#", subghz->file_name);
     widget_add_text_box_element(
-        subghz->widget, 0, 0, 128, 23, AlignCenter, AlignCenter, delete_str);
+        subghz->widget, 0, 0, 128, 23, AlignCenter, AlignCenter, delete_str, false);
 
     widget_add_string_element(
         subghz->widget, 38, 25, AlignLeft, AlignTop, FontSecondary, "RAW signal");
@@ -49,14 +49,14 @@ void subghz_scene_delete_raw_on_enter(void* context) {
     widget_add_button_element(
         subghz->widget, GuiButtonTypeLeft, "Back", subghz_scene_delete_raw_callback, subghz);
 
-    view_dispatcher_switch_to_view(subghz->view_dispatcher, SubGhzViewWidget);
+    view_dispatcher_switch_to_view(subghz->view_dispatcher, SubGhzViewIdWidget);
 }
 
 bool subghz_scene_delete_raw_on_event(void* context, SceneManagerEvent event) {
     SubGhz* subghz = context;
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == SubghzCustomEventSceneDeleteRAW) {
-            strcpy(subghz->file_name_tmp, subghz->file_name);
+        if(event.event == SubGhzCustomEventSceneDeleteRAW) {
+            strncpy(subghz->file_name_tmp, subghz->file_name, SUBGHZ_MAX_LEN_NAME);
             if(subghz_delete_file(subghz)) {
                 scene_manager_next_scene(subghz->scene_manager, SubGhzSceneDeleteSuccess);
             } else {
@@ -64,7 +64,7 @@ bool subghz_scene_delete_raw_on_event(void* context, SceneManagerEvent event) {
                     subghz->scene_manager, SubGhzSceneStart);
             }
             return true;
-        } else if(event.event == SubghzCustomEventSceneDeleteRAWBack) {
+        } else if(event.event == SubGhzCustomEventSceneDeleteRAWBack) {
             return scene_manager_previous_scene(subghz->scene_manager);
         }
     }

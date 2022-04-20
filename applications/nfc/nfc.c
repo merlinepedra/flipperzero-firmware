@@ -3,19 +3,19 @@
 
 bool nfc_custom_event_callback(void* context, uint32_t event) {
     furi_assert(context);
-    Nfc* nfc = (Nfc*)context;
+    Nfc* nfc = context;
     return scene_manager_handle_custom_event(nfc->scene_manager, event);
 }
 
 bool nfc_back_event_callback(void* context) {
     furi_assert(context);
-    Nfc* nfc = (Nfc*)context;
+    Nfc* nfc = context;
     return scene_manager_handle_back_event(nfc->scene_manager);
 }
 
 void nfc_tick_event_callback(void* context) {
     furi_assert(context);
-    Nfc* nfc = (Nfc*)context;
+    Nfc* nfc = context;
     scene_manager_handle_tick_event(nfc->scene_manager);
 }
 
@@ -79,6 +79,11 @@ Nfc* nfc_alloc() {
     view_dispatcher_add_view(
         nfc->view_dispatcher, NfcViewBankCard, bank_card_get_view(nfc->bank_card));
 
+    // Dict Attack
+    nfc->dict_attack = dict_attack_alloc();
+    view_dispatcher_add_view(
+        nfc->view_dispatcher, NfcViewDictAttack, dict_attack_get_view(nfc->dict_attack));
+
     return nfc;
 }
 
@@ -120,6 +125,10 @@ void nfc_free(Nfc* nfc) {
     // Bank Card
     view_dispatcher_remove_view(nfc->view_dispatcher, NfcViewBankCard);
     bank_card_free(nfc->bank_card);
+
+    // Dict Attack
+    view_dispatcher_remove_view(nfc->view_dispatcher, NfcViewDictAttack);
+    dict_attack_free(nfc->dict_attack);
 
     // Worker
     nfc_worker_stop(nfc->worker);

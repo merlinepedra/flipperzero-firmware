@@ -129,16 +129,13 @@ bool desktop_scene_pin_input_on_event(void* context, SceneManagerEvent event) {
             consumed = true;
             break;
         case DesktopPinInputEventUnlocked:
-            desktop_view_locked_unlock(desktop->locked_view);
-            furi_hal_rtc_set_pin_fails(0);
-            desktop_helpers_unlock_system(desktop);
-            scene_manager_search_and_switch_to_previous_scene(
-                desktop->scene_manager, DesktopSceneMain);
+            desktop_unlock(desktop);
             consumed = true;
             break;
         case DesktopPinInputEventBack:
             scene_manager_search_and_switch_to_previous_scene(
                 desktop->scene_manager, DesktopSceneLocked);
+            notification_message(desktop->notification, &sequence_display_off);
             consumed = true;
             break;
         }
@@ -155,7 +152,7 @@ void desktop_scene_pin_input_on_exit(void* context) {
         desktop->scene_manager, DesktopScenePinInput);
     xTimerStop(state->timer, portMAX_DELAY);
     while(xTimerIsTimerActive(state->timer)) {
-        delay(1);
+        furi_hal_delay_ms(1);
     }
     xTimerDelete(state->timer, portMAX_DELAY);
     free(state);

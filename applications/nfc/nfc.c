@@ -181,7 +181,7 @@ int32_t nfc_app(void* p) {
             view_dispatcher_stop(nfc->view_dispatcher);
         }
     } else {
-        scene_manager_next_scene(nfc->scene_manager, NfcSceneEmulateMifareClassic);
+        scene_manager_next_scene(nfc->scene_manager, NfcSceneStart);
     }
 
     view_dispatcher_run(nfc->view_dispatcher);

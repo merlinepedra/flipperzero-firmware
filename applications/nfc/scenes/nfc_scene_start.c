@@ -1,6 +1,8 @@
 #include "../nfc_i.h"
 
 enum SubmenuIndex {
+    SubmenuIndexTransparent,
+    SubmenuIndexClassicEmulation,
     SubmenuIndexRead,
     SubmenuIndexRunScript,
     SubmenuIndexSaved,
@@ -18,6 +20,10 @@ void nfc_scene_start_on_enter(void* context) {
     Nfc* nfc = context;
     Submenu* submenu = nfc->submenu;
 
+    submenu_add_item(
+        submenu, "Transparent", SubmenuIndexTransparent, nfc_scene_start_submenu_callback, nfc);
+    submenu_add_item(
+        submenu, "Classic Emulation", SubmenuIndexClassicEmulation, nfc_scene_start_submenu_callback, nfc);
     submenu_add_item(
         submenu, "Read Card", SubmenuIndexRead, nfc_scene_start_submenu_callback, nfc);
     submenu_add_item(
@@ -63,7 +69,14 @@ bool nfc_scene_start_on_event(void* context, SceneManagerEvent event) {
             scene_manager_set_scene_state(nfc->scene_manager, NfcSceneStart, SubmenuIndexDebug);
             scene_manager_next_scene(nfc->scene_manager, NfcSceneDebug);
             consumed = true;
+        } else if(event.event == SubmenuIndexClassicEmulation) {
+            scene_manager_next_scene(nfc->scene_manager, NfcSceneEmulateMifareClassic);
+            consumed = true;
+        } else if(event.event == SubmenuIndexTransparent) {
+            scene_manager_next_scene(nfc->scene_manager, NfcSceneTransparent);
+            consumed = true;
         }
+
         scene_manager_set_scene_state(nfc->scene_manager, NfcSceneStart, event.event);
     }
     return consumed;

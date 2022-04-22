@@ -134,7 +134,7 @@ void furi_hal_interrupt_set_isr_ex(
 }
 
 /* Timer 2 */
-void TIM2_IRQHandler() {
+__attribute__((weak)) void TIM2_IRQHandler(void) {
     furi_hal_interrupt_call(FuriHalInterruptIdTIM2);
 }
 
@@ -152,7 +152,7 @@ void TIM1_CC_IRQHandler() {
 }
 
 /* DMA 1 */
-void DMA1_Channel1_IRQHandler() {
+__attribute__((weak)) void DMA1_Channel1_IRQHandler(void) {
     furi_hal_interrupt_call(FuriHalInterruptIdDma1Ch1);
 }
 

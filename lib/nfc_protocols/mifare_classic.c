@@ -322,7 +322,7 @@ void print_rx(FuriHalNfcTxRxContext* tx_rx) {
 bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx) {
     furi_assert(tx_rx);
 
-    // print_rx(tx_rx);
+    print_rx(tx_rx);
 
     tx_rx->tx_data[0] = 0x01;
     tx_rx->tx_data[1] = 0x02;
@@ -330,10 +330,14 @@ bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx) {
     tx_rx->tx_rx_type = FuriHalNfcTxRxTypeDefault;
     furi_hal_nfc_tx_rx(tx_rx, 500);
 
-    // print_rx(tx_rx);
+    print_rx(tx_rx);
 
     furi_hal_nfc_enter_transparent();
     furi_hal_nfc_exit_transparent();
+
+    tx_rx->tx_bits = 0;
+    furi_hal_nfc_tx_rx(tx_rx, 300);
+    print_rx(tx_rx);
 
     return false;
 }

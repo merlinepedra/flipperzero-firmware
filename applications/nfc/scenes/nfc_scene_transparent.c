@@ -130,8 +130,6 @@ void nfc_scene_transparent_on_enter(void* context) {
     uint16_t reg = gpio_spi_r_mosi.port->ODR;
     one = reg | gpio_spi_r_mosi.pin;
     zero = reg & ~(gpio_spi_r_mosi.pin);
-    // uint32_t one = gpio_spi_r_mosi.pin;
-    // uint32_t zero = (uint32_t)gpio_spi_r_mosi.pin << 16;
 
     i = 0;
     // SoF
@@ -145,13 +143,6 @@ void nfc_scene_transparent_on_enter(void* context) {
     buff[i] = zero;
     i++;
     FURI_LOG_I(TAG, "One byte 16_t len: %d", i);
-    // for(size_t i = 0; i < BUFF_SIZE; i++) {
-    //     if(i % 2) {
-    //         buff[i] = one;
-    //     } else {
-    //         buff[i] = zero;
-    //     }
-    // }
     // TIM
     LL_APB1_GRP1_ForceReset(LL_APB1_GRP1_PERIPH_TIM2);
     furi_hal_delay_us(100);

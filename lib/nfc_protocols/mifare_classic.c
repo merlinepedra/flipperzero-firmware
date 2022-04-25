@@ -311,20 +311,29 @@ uint8_t mf_classic_read_card(
     return sectors_read;
 }
 
+void print_rx(FuriHalNfcTxRxContext* tx_rx) {
+    FURI_LOG_W(TAG, "Received: %d bytes", tx_rx->rx_bits);
+    for(size_t i = 0; i < tx_rx->rx_bits / 8; i++) {
+        printf("%02X ", tx_rx->rx_data[i]);
+    }
+    printf("\r\n");
+}
+
 bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx) {
     furi_assert(tx_rx);
+
+    print_rx(tx_rx);
 
     tx_rx->tx_data[0] = 0x01;
     tx_rx->tx_data[1] = 0x02;
     tx_rx->tx_bits = 16;
     tx_rx->tx_rx_type = FuriHalNfcTxRxTypeDefault;
-    furi_hal_nfc_tx_rx(tx_rx, 5000);
+    furi_hal_nfc_tx_rx(tx_rx, 500);
 
-    tx_rx->tx_data[0] = 0x04;
-    tx_rx->tx_data[1] = 0x05;
-    tx_rx->tx_bits = 16;
-    tx_rx->tx_rx_type = FuriHalNfcTxRxTypeDefault;
-    furi_hal_nfc_tx_rx(tx_rx, 5000);
+    print_rx(tx_rx);
+
+    furi_hal_nfc_enter_transparent();
+    furi_hal_nfc_exit_transparent();
 
     return false;
 }

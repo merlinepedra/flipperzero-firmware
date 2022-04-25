@@ -5,6 +5,11 @@
 #include <m-string.h>
 #include <lib/nfc_protocols/nfca.h>
 
+#include <stm32wbxx_ll_dma.h>
+#include <stm32wbxx_ll_tim.h>
+#include <furi/common_defines.h>
+#include <furi_hal_delay.h>
+
 #define TAG "FuriHalNfc"
 
 static const uint32_t clocks_in_ms = 64 * 1000;
@@ -44,6 +49,196 @@ void furi_hal_nfc_dump_regs() {
         printf("%02X ", regs.RsB[i]);
     }
     printf("\r\n");
+}
+
+#define BUFF_SIZE (10000)
+
+uint16_t transparent_one = 0;
+uint16_t transparent_zero = 0;
+
+void transparent_add_one(uint16_t* buff, size_t* i) {
+    buff[*i] = transparent_one;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_one;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_one;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_one;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+}
+
+void transparent_add_zero(uint16_t* buff, size_t* i) {
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_one;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_one;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_one;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+    buff[*i] = transparent_one;
+    *i = *i + 1;
+    buff[*i] = transparent_zero;
+    *i = *i + 1;
+}
+
+void transparent_add_byte(uint16_t* buff, size_t* i, uint8_t byte, bool parity) {
+    for(size_t j = 0; j < 8; j++) {
+        if(byte & (1 << j)) {
+            transparent_add_one(buff, i);
+        } else {
+            transparent_add_zero(buff, i);
+        }
+    }
+    if(parity) {
+        transparent_add_one(buff, i);
+    } else {
+        transparent_add_zero(buff, i);
+    }
+}
+
+uint16_t transparent_buff[BUFF_SIZE] = {};
+
+uint32_t transparent_arr[] = {37, 37, 37, 37, 37, 36};
+
+size_t transparent_i = 0;
+
+void furi_hal_nfc_enter_transparent() {
+    // furi_hal_nfc_exit_sleep();
+    // ReturnCode ret = rfalSetMode(RFAL_MODE_LISTEN_NFCA, RFAL_BR_106, RFAL_BR_106);
+    // FURI_LOG_W("LISTEN START", "RETURN %d", ret);
+    platformDisableIrqCallback();
+
+    st25r3916SetRegisterBits(
+        ST25R3916_REG_OP_CONTROL,
+        ST25R3916_REG_OP_CONTROL_en | ST25R3916_REG_OP_CONTROL_rx_en |
+            ST25R3916_REG_OP_CONTROL_en_fd_auto_efd);
+    st25r3916WriteRegister(ST25R3916_REG_IO_CONF1, 0x00);
+
+    // furi_hal_nfc_dump_regs();
+
+    uint16_t reg = gpio_spi_r_mosi.port->ODR;
+    transparent_one = reg | gpio_spi_r_mosi.pin;
+    transparent_zero = reg & ~(gpio_spi_r_mosi.pin);
+    transparent_i = 0;
+    // SoF
+    transparent_add_one(&transparent_buff[transparent_i], &transparent_i);
+    for(size_t j = 0; j < 8; j++) {
+        transparent_add_byte(transparent_buff, &transparent_i, j, true);
+    }
+    // Init periphery
+    // Reset periphery
+    // LL_APB1_GRP1_ForceReset(LL_APB1_GRP1_PERIPH_TIM2);
+    // furi_hal_delay_us(100);
+    // LL_APB1_GRP1_ReleaseReset(LL_APB1_GRP1_PERIPH_TIM2);
+    // furi_hal_delay_us(100);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
+    // Configure timer
+    LL_TIM_SetCounterMode(TIM2, LL_TIM_COUNTERMODE_UP);
+    LL_TIM_SetClockDivision(TIM2, LL_TIM_CLOCKDIVISION_DIV1);
+    LL_TIM_SetPrescaler(TIM2, 0);
+    LL_TIM_SetAutoReload(TIM2, 37);
+    LL_TIM_SetCounter(TIM2, 0);
+    LL_TIM_EnableUpdateEvent(TIM2);
+    LL_TIM_EnableDMAReq_UPDATE(TIM2);
+    // DMA
+    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMAMUX1);
+    // Init gpio dma
+    LL_DMA_InitTypeDef dma_config = {0};
+    dma_config.MemoryOrM2MDstAddress = (uint32_t)transparent_buff;
+    dma_config.PeriphOrM2MSrcAddress = (uint32_t) & (gpio_spi_r_mosi.port->ODR);
+    dma_config.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
+    dma_config.Mode = LL_DMA_MODE_NORMAL;
+    dma_config.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+    dma_config.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+    dma_config.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_HALFWORD;
+    dma_config.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_HALFWORD;
+    dma_config.NbData = transparent_i;
+    dma_config.PeriphRequest = LL_DMAMUX_REQ_TIM2_UP;
+    dma_config.Priority = LL_DMA_PRIORITY_VERYHIGH;
+    LL_DMA_Init(DMA1, LL_DMA_CHANNEL_1, &dma_config);
+    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, transparent_i);
+    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
+    // Init ARR dma
+    dma_config.MemoryOrM2MDstAddress = (uint32_t)transparent_arr;
+    dma_config.PeriphOrM2MSrcAddress = (uint32_t) & (TIM2->ARR);
+    dma_config.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
+    dma_config.Mode = LL_DMA_MODE_CIRCULAR;
+    dma_config.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+    dma_config.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+    dma_config.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_WORD;
+    dma_config.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
+    dma_config.NbData = SIZEOF_ARRAY(transparent_arr);
+    dma_config.PeriphRequest = LL_DMAMUX_REQ_TIM2_UP;
+    dma_config.Priority = LL_DMA_PRIORITY_VERYHIGH;
+    LL_DMA_Init(DMA1, LL_DMA_CHANNEL_2, &dma_config);
+    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, SIZEOF_ARRAY(transparent_arr));
+    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
+    st25r3916ExecuteCommand(ST25R3916_CMD_TRANSPARENT_MODE);
+    // osDelay(3);
+    // Reconfigure gpio and start
+    furi_hal_spi_bus_handle_deinit(&furi_hal_spi_bus_handle_nfc);
+    furi_hal_gpio_init(&gpio_spi_r_mosi, GpioModeOutputPushPull, GpioPullNo, GpioSpeedVeryHigh);
+    furi_hal_gpio_write(&gpio_spi_r_mosi, false);
+    // osDelay(10);
+    LL_TIM_GenerateEvent_UPDATE(TIM2);
+    LL_TIM_EnableCounter(TIM2);
+    while(!LL_DMA_IsActiveFlag_TC1(DMA1));
+}
+
+void furi_hal_nfc_exit_transparent() {
+    LL_TIM_DisableCounter(TIM2);
+    LL_TIM_SetCounter(TIM2, 0);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+    furi_hal_spi_bus_handle_init(&furi_hal_spi_bus_handle_nfc);
+    platformEnableIrqCallback();
+    // furi_hal_nfc_dump_regs();
 }
 
 bool furi_hal_nfc_is_busy() {

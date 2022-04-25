@@ -87,6 +87,10 @@ typedef struct {
  */
 void furi_hal_nfc_dump_regs();
 
+void furi_hal_nfc_enter_transparent();
+
+void furi_hal_nfc_exit_transparent();
+
 /** Init nfc
  */
 void furi_hal_nfc_init();

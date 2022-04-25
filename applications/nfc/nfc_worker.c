@@ -344,6 +344,9 @@ void nfc_worker_emulate_mifare_classic(NfcWorker* nfc_worker) {
             .type = MfClassicType1k,
         },
     };
+    for(uint8_t i = 0; i < MF_CLASSIC_BLOCK_SIZE; i++) {
+        emulator.data.block[0].value[i] = i;
+    }
     FuriHalNfcTxRxContext tx_rx;
 
     while(nfc_worker->state == NfcWorkerStateEmulateMifareClassic) {

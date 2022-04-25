@@ -167,7 +167,7 @@ void furi_hal_nfc_enter_transparent() {
     transparent_i = 0;
     // SoF
     transparent_add_one(&transparent_buff[transparent_i], &transparent_i);
-    for(size_t j = 0; j < 8; j++) {
+    for(size_t j = 0; j < 18; j++) {
         transparent_add_byte(transparent_buff, &transparent_i, j, true);
     }
     // Init periphery
@@ -229,6 +229,7 @@ void furi_hal_nfc_enter_transparent() {
     LL_TIM_GenerateEvent_UPDATE(TIM2);
     LL_TIM_EnableCounter(TIM2);
     while(!LL_DMA_IsActiveFlag_TC1(DMA1));
+    LL_DMA_ClearFlag_TC1(DMA1);
 }
 
 void furi_hal_nfc_exit_transparent() {

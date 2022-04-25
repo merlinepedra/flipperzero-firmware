@@ -147,7 +147,7 @@ uint32_t transparent_arr[] = {37, 37, 37, 37, 37, 36};
 
 size_t transparent_i = 0;
 
-void furi_hal_nfc_enter_transparent() {
+void furi_hal_nfc_enter_transparent(FuriHalNfcTxRxContext* tx_rx) {
     // furi_hal_nfc_exit_sleep();
     // ReturnCode ret = rfalSetMode(RFAL_MODE_LISTEN_NFCA, RFAL_BR_106, RFAL_BR_106);
     // FURI_LOG_W("LISTEN START", "RETURN %d", ret);
@@ -167,8 +167,8 @@ void furi_hal_nfc_enter_transparent() {
     transparent_i = 0;
     // SoF
     transparent_add_one(&transparent_buff[transparent_i], &transparent_i);
-    for(size_t j = 0; j < 18; j++) {
-        transparent_add_byte(transparent_buff, &transparent_i, j, true);
+    for(size_t j = 0; j < tx_rx->tx_bits / 8; j++) {
+        transparent_add_byte(transparent_buff, &transparent_i, tx_rx->tx_data[j], tx_rx->tx_parity[j / 8] & (7 - j));
     }
     // Init periphery
     // Reset periphery
@@ -228,7 +228,8 @@ void furi_hal_nfc_enter_transparent() {
     // osDelay(10);
     LL_TIM_GenerateEvent_UPDATE(TIM2);
     LL_TIM_EnableCounter(TIM2);
-    while(!LL_DMA_IsActiveFlag_TC1(DMA1));
+    while(!LL_DMA_IsActiveFlag_TC1(DMA1))
+        ;
     LL_DMA_ClearFlag_TC1(DMA1);
 }
 
@@ -239,6 +240,10 @@ void furi_hal_nfc_exit_transparent() {
     LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
     furi_hal_spi_bus_handle_init(&furi_hal_spi_bus_handle_nfc);
     platformEnableIrqCallback();
+    ReturnCode ret = rfalSetMode(RFAL_MODE_LISTEN_NFCA, RFAL_BR_106, RFAL_BR_106);
+    if(ret) {
+        FURI_LOG_E(TAG, "Failed to start listen mode: %d");
+    }
     // furi_hal_nfc_dump_regs();
 }
 
@@ -693,6 +698,10 @@ bool furi_hal_nfc_tx_rx(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
             tx_rx->tx_data, tx_rx->tx_bits / 8, tx_rx->tx_parity, temp_tx_buff);
         ret = rfalNfcDataExchangeCustomStart(
             temp_tx_buff, temp_tx_bits, &temp_rx_buff, &temp_rx_bits, RFAL_FWT_NONE, flags);
+    } else if(tx_rx->tx_rx_type == FuriHalNfcTxRxTransparent) {
+        furi_hal_nfc_enter_transparent(tx_rx);
+        ret = ERR_NONE;
+        furi_hal_nfc_exit_transparent();
     } else {
         ret = rfalNfcDataExchangeCustomStart(
             tx_rx->tx_data, tx_rx->tx_bits, &temp_rx_buff, &temp_rx_bits, RFAL_FWT_NONE, flags);

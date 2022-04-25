@@ -327,16 +327,27 @@ bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx) {
     tx_rx->tx_data[0] = 0x01;
     tx_rx->tx_data[1] = 0x02;
     tx_rx->tx_bits = 16;
-    tx_rx->tx_rx_type = FuriHalNfcTxRxTypeDefault;
-    furi_hal_nfc_tx_rx(tx_rx, 500);
+    tx_rx->tx_rx_type = FuriHalNfcTxRxTypeRxNoCrc;
+    if(!furi_hal_nfc_tx_rx(tx_rx, 500)) {
+        FURI_LOG_E(TAG, "Error in 1st data exchange");
+        return false;
+    }
 
     print_rx(tx_rx);
 
-    furi_hal_nfc_enter_transparent();
-    furi_hal_nfc_exit_transparent();
+    tx_rx->tx_data[0] = 0xDE;
+    tx_rx->tx_data[1] = 0xAD;
+    tx_rx->tx_data[2] = 0xBE;
+    tx_rx->tx_data[3] = 0xEF;
+    tx_rx->tx_parity[0] = 0xFF;
+    tx_rx->tx_bits = 9 * 4;
+    tx_rx->tx_rx_type = FuriHalNfcTxRxTransparent;
 
-    tx_rx->tx_bits = 0;
-    furi_hal_nfc_tx_rx(tx_rx, 300);
+    if(!furi_hal_nfc_tx_rx(tx_rx, 500)) {
+        FURI_LOG_E(TAG, "Error in 1st data exchange");
+        return false;
+    }
+    
     print_rx(tx_rx);
 
     return false;

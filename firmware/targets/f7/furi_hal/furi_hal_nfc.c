@@ -26,6 +26,8 @@ void furi_hal_nfc_init() {
         furi_hal_nfc_start_sleep();
         event = osEventFlagsNew(NULL);
         FURI_LOG_I(TAG, "Init OK");
+        furi_hal_gpio_init(&gpio_ext_pa7, GpioModeOutputPushPull, GpioPullNo, GpioSpeedHigh);
+        furi_hal_gpio_write(&gpio_ext_pa7, true);
     } else {
         FURI_LOG_W(TAG, "Initialization failed, RFAL returned: %d", ret);
     }
@@ -143,7 +145,7 @@ void transparent_add_byte(uint16_t* buff, size_t* i, uint8_t byte, bool parity) 
 
 uint16_t transparent_buff[BUFF_SIZE] = {};
 
-uint32_t transparent_arr[] = {37, 37, 37, 37, 37, 36};
+uint32_t transparent_arr[] = {37, 37, 37, 37, 36, 37, 37, 36};
 
 size_t transparent_i = 0;
 
@@ -227,10 +229,13 @@ void furi_hal_nfc_enter_transparent(FuriHalNfcTxRxContext* tx_rx) {
     furi_hal_gpio_init(&gpio_spi_r_mosi, GpioModeOutputPushPull, GpioPullNo, GpioSpeedVeryHigh);
     furi_hal_gpio_write(&gpio_spi_r_mosi, false);
     // osDelay(10);
+    furi_hal_gpio_write(&gpio_ext_pa7, false);
     LL_TIM_GenerateEvent_UPDATE(TIM2);
     LL_TIM_EnableCounter(TIM2);
     while(!LL_DMA_IsActiveFlag_TC1(DMA1))
         ;
+    furi_hal_gpio_write(&gpio_ext_pa7, true);
+
     LL_DMA_ClearFlag_TC1(DMA1);
 }
 

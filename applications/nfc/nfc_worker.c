@@ -338,14 +338,19 @@ void nfc_worker_emulate_mifare_classic(NfcWorker* nfc_worker) {
     uint8_t sak = 0x08;
     uint8_t uid[] = {0x04, 0x30, 0x42, 0x1A, 0x8A, 0x44, 0x80};
     uint8_t atqa[] = {0x44, 0x00};
-
+    MfClassicEmulator emulator = {
+        .cuid = 0x1A8A4480,
+        .data = {
+            .type = MfClassicType1k,
+        },
+    };
     FuriHalNfcTxRxContext tx_rx;
 
     while(nfc_worker->state == NfcWorkerStateEmulateMifareClassic) {
         if(furi_hal_nfc_listen(uid, uid_len, atqa, sak, true, 4000)) {
             tx_rx.tx_bits = 0;
             furi_hal_nfc_tx_rx(&tx_rx, 300);
-            mf_classic_emulator(&tx_rx);
+            mf_classic_emulator(&emulator, &tx_rx);
         }
     }
 }

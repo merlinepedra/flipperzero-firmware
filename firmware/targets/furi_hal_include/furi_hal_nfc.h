@@ -39,6 +39,7 @@ typedef enum {
     FuriHalNfcTxRxTypeRxNoCrc,
     FuriHalNfcTxRxTypeRxKeepPar,
     FuriHalNfcTxRxTypeRaw,
+    FuriHalNfcTxRxTypeRxRaw,
     FuriHalNfcTxRxTransparent,
 } FuriHalNfcTxRxType;
 
@@ -91,6 +92,8 @@ void furi_hal_nfc_dump_regs();
 void furi_hal_nfc_enter_transparent();
 
 void furi_hal_nfc_exit_transparent();
+
+bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms);
 
 /** Init nfc
  */

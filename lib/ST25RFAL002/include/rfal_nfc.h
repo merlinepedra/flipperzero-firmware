@@ -375,6 +375,8 @@ ReturnCode rfalNfcDataExchangeCustomStart(
     uint32_t fwt,
     uint32_t flags);
 
+void rfalSetListenState();
+
 /*! 
  *****************************************************************************
  * \brief  RFAL NFC Get Data Exchange Status

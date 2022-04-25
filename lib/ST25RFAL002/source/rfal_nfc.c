@@ -117,7 +117,7 @@ typedef struct {
 #ifdef RFAL_TEST_MODE
 rfalNfc gNfcDev;
 #else /* RFAL_TEST_MODE */
-static rfalNfc gNfcDev;
+rfalNfc gNfcDev;
 #endif /* RFAL_TEST_MODE */
 
 /*
@@ -684,6 +684,12 @@ ReturnCode rfalNfcDataExchangeStart(
     }
 
     return ERR_WRONG_STATE;
+}
+
+void rfalSetListenState() {
+    gNfcDev.state = RFAL_NFC_STATE_ACTIVATED;
+    gNfcDev.disc.activate_after_sak = false;
+    // rfal.
 }
 
 ReturnCode rfalNfcDataExchangeCustomStart(

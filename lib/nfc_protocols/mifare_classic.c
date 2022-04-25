@@ -319,15 +319,23 @@ void print_rx(FuriHalNfcTxRxContext* tx_rx) {
     printf("\r\n");
 }
 
-bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx) {
+bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_rx) {
+    furi_assert(emulator);
     furi_assert(tx_rx);
 
     print_rx(tx_rx);
+    uint64_t key_a = 0xa0a1a2a3a4a5;
+    uint32_t nonce = prng_successor(DWT->CYCCNT, 32);
+    uint8_t nt[4];
+    uint8_t nt_keystream[4];
+    nfc_util_num2bytes(nonce, 4, nt);
+    nfc_util_num2bytes(nonce ^ emulator->cuid, 4, nt_keystream);
+    crypto1_init(&emulator->crypto, key_a);
+    crypto1_word(&emulator->crypto, emulator->cuid ^ nonce, 0);
 
-    tx_rx->tx_data[0] = 0x01;
-    tx_rx->tx_data[1] = 0x02;
-    tx_rx->tx_bits = 16;
-    tx_rx->tx_rx_type = FuriHalNfcTxRxTypeRxNoCrc;
+    memcpy(tx_rx->tx_data, nt, sizeof(nt));
+    tx_rx->tx_bits = sizeof(nt) * 8;
+    tx_rx->tx_rx_type = FuriHalNfcTxRxTypeRxRaw;
     if(!furi_hal_nfc_tx_rx(tx_rx, 500)) {
         FURI_LOG_E(TAG, "Error in 1st data exchange");
         return false;
@@ -335,19 +343,51 @@ bool mf_classic_emulator(FuriHalNfcTxRxContext* tx_rx) {
 
     print_rx(tx_rx);
 
-    tx_rx->tx_data[0] = 0xDE;
-    tx_rx->tx_data[1] = 0xAD;
-    tx_rx->tx_data[2] = 0xBE;
-    tx_rx->tx_data[3] = 0xEF;
-    tx_rx->tx_parity[0] = 0xFF;
-    tx_rx->tx_bits = 9 * 4;
-    tx_rx->tx_rx_type = FuriHalNfcTxRxTransparent;
-
-    if(!furi_hal_nfc_tx_rx(tx_rx, 500)) {
-        FURI_LOG_E(TAG, "Error in 1st data exchange");
+    if(tx_rx->rx_bits != 64) {
+        FURI_LOG_E(TAG, "Incorrect nr + ar");
         return false;
     }
-    
+
+    uint32_t nr = nfc_util_bytes2num(tx_rx->rx_data, 4);
+    uint32_t ar = nfc_util_bytes2num(&tx_rx->rx_data[4], 4);
+    crypto1_word(&emulator->crypto, nr, 1);
+    uint32_t cardRr = ar ^ crypto1_word(&emulator->crypto, 0, 0);
+    if(cardRr != prng_successor(nonce, 64)) {
+        FURI_LOG_E(TAG, "Wrong AUTH!");
+        // return false;
+    }
+    uint32_t ans = prng_successor(nonce, 96);
+    uint8_t responce[4] = {};
+    nfc_util_num2bytes(ans, 4, responce);
+    tx_rx->tx_parity[0] = 0;
+    for(uint8_t i = 0; i < 4; i++) {
+        tx_rx->tx_data[i] = crypto1_byte(&emulator->crypto, 0, 0) ^ responce[i];
+        tx_rx->tx_parity[0] |=
+            (((crypto1_filter(emulator->crypto.odd) ^ nfc_util_odd_parity8(responce[i])) & 0x01)
+             << (7 - (i & 0x0007)));
+    }
+
+
+    tx_rx->tx_bits = 8 * 4;
+    tx_rx->tx_rx_type = FuriHalNfcTxRxTransparent;
+
+    if(!furi_hal_nfc_tx_rx_transparent(tx_rx, 500)) {
+        FURI_LOG_E(TAG, "Error in 2nd data exchange");
+        return false;
+    }
+
+    print_rx(tx_rx);
+
+    // transmit plain for now
+    memcpy(tx_rx->tx_data, emulator->data.block[0].value, MF_CLASSIC_BLOCK_SIZE);
+    nfca_append_crc16(tx_rx->tx_data, 16);
+    tx_rx->tx_bits = 18 * 8;
+    tx_rx->tx_rx_type = FuriHalNfcTxRxTransparent;
+    if(!furi_hal_nfc_tx_rx_transparent(tx_rx, 500)) {
+        FURI_LOG_E(TAG, "Error in Block emulation data exchange");
+        return false;
+    }
+
     print_rx(tx_rx);
 
     return false;

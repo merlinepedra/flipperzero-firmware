@@ -347,6 +347,8 @@ void nfc_worker_emulate_mifare_classic(NfcWorker* nfc_worker) {
     for(uint8_t i = 0; i < MF_CLASSIC_BLOCK_SIZE; i++) {
         emulator.data.block[0].value[i] = i;
     }
+    uint8_t enter[] = {0x45, 0xDB, 0x10, 0x0B, 0x58, 0xBE, 0x4E, 0x2A, 0xD7, 0xD5, 0x22, 0xFC, 0x41, 0x80, 0x88, 0x00};
+    memcpy(emulator.data.block[32].value, enter, MF_CLASSIC_BLOCK_SIZE);
     FuriHalNfcTxRxContext tx_rx;
 
     while(nfc_worker->state == NfcWorkerStateEmulateMifareClassic) {

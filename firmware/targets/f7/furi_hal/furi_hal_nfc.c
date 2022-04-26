@@ -226,6 +226,9 @@ void furi_hal_nfc_enter_transparent(FuriHalNfcTxRxContext* tx_rx) {
     // osDelay(3);
     // Reconfigure gpio and start
     furi_hal_spi_bus_handle_deinit(&furi_hal_spi_bus_handle_nfc);
+    furi_hal_gpio_init(&gpio_spi_r_sck, GpioModeInput, GpioPullUp, GpioSpeedLow);
+    furi_hal_gpio_init(&gpio_spi_r_miso, GpioModeInput, GpioPullUp, GpioSpeedLow);
+    furi_hal_gpio_init(&gpio_nfc_cs, GpioModeInput, GpioPullUp, GpioSpeedLow);
     furi_hal_gpio_init(&gpio_spi_r_mosi, GpioModeOutputPushPull, GpioPullNo, GpioSpeedVeryHigh);
     furi_hal_gpio_write(&gpio_spi_r_mosi, false);
     // osDelay(10);

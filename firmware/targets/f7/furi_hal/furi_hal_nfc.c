@@ -722,9 +722,23 @@ bool furi_hal_nfc_tx_rx(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
         // FURI_LOG_I(TAG, "Exit transparent");
 
         st25r3916ExecuteCommand(ST25R3916_CMD_UNMASK_RECEIVE_DATA);
-        uint32_t irq = st25r3916WaitForInterruptsTimed(ST25R3916_IRQ_MASK_RXE | ST25R3916_IRQ_MASK_RXS, 1000);
+        uint32_t irq = st25r3916WaitForInterruptsTimed(ST25R3916_IRQ_MASK_RXE, 1000);
         if(irq) {
-            FURI_LOG_W(TAG, "Received %d interrupt", irq);
+            uint8_t fifo_stat[2];
+            st25r3916ReadMultipleRegisters(
+                ST25R3916_REG_FIFO_STATUS1, fifo_stat, ST25R3916_FIFO_STATUS_LEN);
+            uint16_t len =
+                ((((uint16_t)fifo_stat[1] & ST25R3916_REG_FIFO_STATUS2_fifo_b_mask) >>
+                  ST25R3916_REG_FIFO_STATUS2_fifo_b_shift)
+                 << RFAL_BITS_IN_BYTE);
+            len |= (((uint16_t)fifo_stat[0]) & 0x00FFU);
+            uint8_t rx[100];
+            st25r3916ReadFifo(rx, len);
+            FURI_LOG_W(TAG, "Received %d interrupt. FIFO len: %d", irq, len);
+            for(size_t i = 0; i < len; i++) {
+                printf("%02X ", rx[i]);
+            }
+            printf("\r\n");
         } else {
             FURI_LOG_E(TAG, "Timeout error");
         }

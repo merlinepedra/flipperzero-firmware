@@ -1,5 +1,6 @@
 #include "furi_hal_nfc.h"
 #include <st25r3916.h>
+#include <st25r3916_irq.h>
 #include <rfal_rf.h>
 #include <furi.h>
 #include <m-string.h>
@@ -248,11 +249,16 @@ void furi_hal_nfc_exit_transparent() {
     LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
     LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
     furi_hal_spi_bus_handle_init(&furi_hal_spi_bus_handle_nfc);
+    clear_interrupts();
     platformEnableIrqCallback();
-    ReturnCode ret = rfalSetMode(RFAL_MODE_LISTEN_NFCA, RFAL_BR_106, RFAL_BR_106);
-    if(ret) {
-        FURI_LOG_E(TAG, "Failed to start listen mode: %d");
-    }
+    // furi_hal_gpio_write(&gpio_nfc_cs, false);
+    // furi_hal_delay_ms(1);
+    // furi_hal_gpio_write(&gpio_nfc_cs, true);
+    // ReturnCode ret = rfalSetMode(RFAL_MODE_LISTEN_NFCA, RFAL_BR_106, RFAL_BR_106);
+    // if(ret) {
+    // FURI_LOG_E(TAG, "Failed to start listen mode: %d");
+    // }
+
     // furi_hal_nfc_dump_regs();
 }
 
@@ -713,6 +719,15 @@ bool furi_hal_nfc_tx_rx(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
     } else if(tx_rx->tx_rx_type == FuriHalNfcTxRxTransparent) {
         furi_hal_nfc_enter_transparent(tx_rx);
         furi_hal_nfc_exit_transparent();
+        // FURI_LOG_I(TAG, "Exit transparent");
+
+        st25r3916ExecuteCommand(ST25R3916_CMD_UNMASK_RECEIVE_DATA);
+        uint32_t irq = st25r3916WaitForInterruptsTimed(ST25R3916_IRQ_MASK_RXE | ST25R3916_IRQ_MASK_RXS, 1000);
+        if(irq) {
+            FURI_LOG_W(TAG, "Received %d interrupt", irq);
+        } else {
+            FURI_LOG_E(TAG, "Timeout error");
+        }
     } else {
         ret = rfalNfcDataExchangeCustomStart(
             tx_rx->tx_data, tx_rx->tx_bits, &temp_rx_buff, &temp_rx_bits, RFAL_FWT_NONE, flags);

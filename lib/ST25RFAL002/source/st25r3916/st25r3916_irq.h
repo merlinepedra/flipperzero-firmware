@@ -225,6 +225,8 @@ void st25r3916CheckForReceivedInterrupts(void);
  */
 void st25r3916Isr(void);
 
+void clear_interrupts();
+
 /*! 
  *****************************************************************************
  *  \brief  Enable a given ST25R3916 Interrupt source

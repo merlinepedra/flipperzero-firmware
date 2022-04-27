@@ -102,6 +102,31 @@ void st25r3916Isr(void) {
     }
 }
 
+void clear_interrupts() {
+    uint8_t iregs[ST25R3916_INT_REGS_LEN];
+    uint32_t irqStatus;
+
+    /* Initialize iregs */
+    irqStatus = ST25R3916_IRQ_MASK_NONE;
+    ST_MEMSET(iregs, (int32_t)(ST25R3916_IRQ_MASK_ALL & 0xFFU), ST25R3916_INT_REGS_LEN);
+
+    /* In case the IRQ is Edge (not Level) triggered read IRQs until done */
+    st25r3916ReadMultipleRegisters(ST25R3916_REG_IRQ_MAIN, iregs, ST25R3916_INT_REGS_LEN);
+
+    irqStatus |= (uint32_t)iregs[0];
+    irqStatus |= (uint32_t)iregs[1] << 8;
+    irqStatus |= (uint32_t)iregs[2] << 16;
+    irqStatus |= (uint32_t)iregs[3] << 24;
+
+    /* Forward all interrupts, even masked ones to application */
+    platformProtectST25RIrqStatus();
+    st25r3916interrupt.status |= irqStatus;
+    platformUnprotectST25RIrqStatus();
+
+    /* Send an IRQ event to LED handling */
+    st25r3916ledEvtIrq(st25r3916interrupt.status);
+}
+
 /*******************************************************************************/
 void st25r3916CheckForReceivedInterrupts(void) {
     uint8_t iregs[ST25R3916_INT_REGS_LEN];

@@ -359,8 +359,9 @@ bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_
     crypto1_word(&emulator->crypto, nr, 1);
     uint32_t cardRr = ar ^ crypto1_word(&emulator->crypto, 0, 0);
     if(cardRr != prng_successor(nonce, 64)) {
-        FURI_LOG_E(TAG, "Wrong AUTH!");
-        // return false;
+        FURI_LOG_E(TAG, "Wrong AUTH! %08X != %08X", cardRr, prng_successor(nonce, 64));
+        // Don't send NACK, as tag don't send it
+        return false;
     }
     uint32_t ans = prng_successor(nonce, 96);
     uint8_t responce[4] = {};
@@ -381,64 +382,38 @@ bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_
         return false;
     }
 
-    // // We know that command is read block
-    // uint8_t read_cmd[4] = {0x30, 0x00, 0x00, 0x00};
-    // uint8_t encrypted_cmd[4] = {};
-    // Crypto1 reader_crypto = emulator->crypto;
-    // // for(uint8_t sector = 0; sector < 4; sector++) {
-    //     read_cmd[1] = 0;//sector;
-    //     nfca_append_crc16(read_cmd, 2);
-    //     for(uint8_t i = 0; i < 4; i++) {
-    //         encrypted_cmd[i] = crypto1_byte(&reader_crypto, 0x00, 0) ^ read_cmd[i];
-    //     }
-    //     // FURI_LOG_I(
-    //     //     TAG,
-    //     //     "Encrypted read cmd: %02X %02X %02X %02X",
-    //     //     encrypted_cmd[0],
-    //     //     encrypted_cmd[1],
-    //     //     encrypted_cmd[2],
-    //     //     encrypted_cmd[3]);
-    //     (void)encrypted_cmd;
+    uint8_t decrypted_cmd[4] = {};
+    for(uint8_t i = 0; i < 4; i++) {
+        decrypted_cmd[i] = crypto1_byte(&emulator->crypto, 0, 0) ^ tx_rx->rx_data[i];
+    }
 
-    //     // Decode command
-    //     uint8_t decrypted_cmd[4] = {};
-    //     for(uint8_t i = 0; i < 4; i++) {
-    //         decrypted_cmd[i] = crypto1_byte(&emulator->crypto, 0, 0) & decrypted_cmd[i];
-    //     }
-    //     // Send 0 block
-    //     uint8_t block_data[18] = {};
-    //     memcpy(block_data, emulator->data.block[0].value, MF_CLASSIC_BLOCK_SIZE);
-    //     nfca_append_crc16(block_data, 16);
-    //     tx_rx->tx_parity[0] = 0;
-    //     tx_rx->tx_parity[1] = 0;
+    if(decrypted_cmd[0] != 0x30) {
+        FURI_LOG_W(TAG, "Not read command");
+        return false;
+    }
+    uint16_t block_num = decrypted_cmd[1];
 
-    //     for(uint8_t i = 0; i < 18; i++) {
-    //         tx_rx->tx_data[i] = crypto1_byte(&emulator->crypto, 0, 0) ^ block_data[i];
-    //         tx_rx->tx_parity[i / 8] |=
-    //             (((crypto1_filter(emulator->crypto.odd) ^ nfc_util_odd_parity8(block_data[i])) &
-    //               0x01)
-    //              << (7 - (i & 0x0007)));
-    //     }
+    // Send 0 block
+    uint8_t block_data[18] = {};
+    memcpy(block_data, emulator->data.block[block_num].value, MF_CLASSIC_BLOCK_SIZE);
+    nfca_append_crc16(block_data, 16);
+    tx_rx->tx_parity[0] = 0;
+    tx_rx->tx_parity[1] = 0;
 
-    //     tx_rx->tx_bits = 18 * 8;
-    //     tx_rx->tx_rx_type = FuriHalNfcTxRxTransparent;
-    //     t_st25r3916Regs regs_before;
-    //     t_st25r3916Regs regs_after;
+    for(uint8_t i = 0; i < 18; i++) {
+        tx_rx->tx_data[i] = crypto1_byte(&emulator->crypto, 0, 0) ^ block_data[i];
+        tx_rx->tx_parity[i / 8] |=
+            (((crypto1_filter(emulator->crypto.odd) ^ nfc_util_odd_parity8(block_data[i])) & 0x01)
+             << (7 - (i & 0x0007)));
+    }
 
-    //     st25r3916GetRegsDump(&regs_before);
-    //     if(!furi_hal_nfc_tx_rx(tx_rx, 500)) {
-    //         FURI_LOG_E(TAG, "Error in Block emulation data exchange");
-    //         return false;
-    //     }
-    //     st25r3916GetRegsDump(&regs_after);
-    //     for(size_t i = 0; i < sizeof(regs_after.RsA); i++) {
-    //         if(regs_after.RsA[i] != regs_before.RsA[i]) {
-    //             FURI_LOG_W(TAG, "%02X reg before: %02Xb after: %02X", i, regs_before.RsA[i], regs_after.RsA[i]);
-    //         }
-    //     }
+    tx_rx->tx_bits = 18 * 8;
+    tx_rx->tx_rx_type = FuriHalNfcTxRxTransparent;
 
-    // print_rx(tx_rx);
-    // }
+    if(!furi_hal_nfc_tx_rx(tx_rx, 500)) {
+        FURI_LOG_E(TAG, "Error in Block emulation data exchange");
+        return false;
+    }
 
     return false;
 }

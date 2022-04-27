@@ -699,6 +699,38 @@ uint16_t furi_hal_nfc_bitstream_to_data_and_parity(
     return curr_byte;
 }
 
+bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
+    furi_assert(tx_rx);
+    furi_hal_nfc_enter_transparent(tx_rx);
+    furi_hal_nfc_exit_transparent();
+
+    st25r3916ExecuteCommand(ST25R3916_CMD_UNMASK_RECEIVE_DATA);
+    uint32_t irq = st25r3916WaitForInterruptsTimed(ST25R3916_IRQ_MASK_RXE, timeout_ms);
+    if(irq) {
+        uint8_t fifo_stat[2];
+        st25r3916ReadMultipleRegisters(
+            ST25R3916_REG_FIFO_STATUS1, fifo_stat, ST25R3916_FIFO_STATUS_LEN);
+        uint16_t len =
+            ((((uint16_t)fifo_stat[1] & ST25R3916_REG_FIFO_STATUS2_fifo_b_mask) >>
+              ST25R3916_REG_FIFO_STATUS2_fifo_b_shift)
+             << RFAL_BITS_IN_BYTE);
+        len |= (((uint16_t)fifo_stat[0]) & 0x00FFU);
+        uint8_t rx[100];
+        st25r3916ReadFifo(rx, len);
+        // FURI_LOG_W(TAG, "Received %d interrupt. FIFO len: %d", irq, len);
+        // for(size_t i = 0; i < len; i++) {
+        //     printf("%02X ", rx[i]);
+        // }
+        // printf("\r\n");
+        tx_rx->rx_bits = len * 8;
+        memcpy(tx_rx->rx_data, rx, len);
+        return true;
+    } else {
+        FURI_LOG_E(TAG, "Timeout error");
+        return false;
+    }
+}
+
 bool furi_hal_nfc_tx_rx(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
     furi_assert(tx_rx);
 
@@ -709,6 +741,10 @@ bool furi_hal_nfc_tx_rx(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
     uint8_t* temp_rx_buff = NULL;
     uint16_t* temp_rx_bits = NULL;
 
+    // TODO rework!
+    if(tx_rx->tx_rx_type == FuriHalNfcTxRxTransparent) {
+        return furi_hal_nfc_tx_rx_transparent(tx_rx, timeout_ms);
+    }
     // Prepare data for FIFO if necessary
     uint32_t flags = furi_hal_nfc_tx_rx_get_flag(tx_rx->tx_rx_type);
     if(tx_rx->tx_rx_type == FuriHalNfcTxRxTypeRaw) {
@@ -716,32 +752,6 @@ bool furi_hal_nfc_tx_rx(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
             tx_rx->tx_data, tx_rx->tx_bits / 8, tx_rx->tx_parity, temp_tx_buff);
         ret = rfalNfcDataExchangeCustomStart(
             temp_tx_buff, temp_tx_bits, &temp_rx_buff, &temp_rx_bits, RFAL_FWT_NONE, flags);
-    } else if(tx_rx->tx_rx_type == FuriHalNfcTxRxTransparent) {
-        furi_hal_nfc_enter_transparent(tx_rx);
-        furi_hal_nfc_exit_transparent();
-        // FURI_LOG_I(TAG, "Exit transparent");
-
-        st25r3916ExecuteCommand(ST25R3916_CMD_UNMASK_RECEIVE_DATA);
-        uint32_t irq = st25r3916WaitForInterruptsTimed(ST25R3916_IRQ_MASK_RXE, 1000);
-        if(irq) {
-            uint8_t fifo_stat[2];
-            st25r3916ReadMultipleRegisters(
-                ST25R3916_REG_FIFO_STATUS1, fifo_stat, ST25R3916_FIFO_STATUS_LEN);
-            uint16_t len =
-                ((((uint16_t)fifo_stat[1] & ST25R3916_REG_FIFO_STATUS2_fifo_b_mask) >>
-                  ST25R3916_REG_FIFO_STATUS2_fifo_b_shift)
-                 << RFAL_BITS_IN_BYTE);
-            len |= (((uint16_t)fifo_stat[0]) & 0x00FFU);
-            uint8_t rx[100];
-            st25r3916ReadFifo(rx, len);
-            FURI_LOG_W(TAG, "Received %d interrupt. FIFO len: %d", irq, len);
-            for(size_t i = 0; i < len; i++) {
-                printf("%02X ", rx[i]);
-            }
-            printf("\r\n");
-        } else {
-            FURI_LOG_E(TAG, "Timeout error");
-        }
     } else {
         ret = rfalNfcDataExchangeCustomStart(
             tx_rx->tx_data, tx_rx->tx_bits, &temp_rx_buff, &temp_rx_bits, RFAL_FWT_NONE, flags);

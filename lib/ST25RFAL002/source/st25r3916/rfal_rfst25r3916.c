@@ -3642,12 +3642,10 @@ static ReturnCode rfalRunListenModeWorker(void) {
 
         irqs = st25r3916GetInterrupt((ST25R3916_IRQ_MASK_RXE | ST25R3916_IRQ_MASK_EOF));
         if(irqs == ST25R3916_IRQ_MASK_NONE) {
-            printf("sprosite pozhe\r\n");
             break; /* No interrupt to process */
         }
 
         if((irqs & ST25R3916_IRQ_MASK_RXE) != 0U) {
-            printf("zdarov\r\n");
             /* Retrieve the error flags/irqs */
             irqs |= st25r3916GetInterrupt(
                 (ST25R3916_IRQ_MASK_PAR | ST25R3916_IRQ_MASK_CRC | ST25R3916_IRQ_MASK_ERR2 |
@@ -3683,10 +3681,8 @@ static ReturnCode rfalRunListenModeWorker(void) {
             *gRFAL.Lm.rxLen = (uint16_t)rfalConvBytesToBits(*gRFAL.Lm.rxLen);
             gRFAL.Lm.dataFlag = true;
         } else if((irqs & ST25R3916_IRQ_MASK_EOF) != 0U) {
-            printf("pole vkluchi\r\n");
             rfalListenSetState(RFAL_LM_STATE_POWER_OFF);
         } else {
-            printf("unknown hueta\r\n");
             /* MISRA 15.7 - Empty else */
         }
         break;

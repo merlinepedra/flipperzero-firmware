@@ -13,6 +13,7 @@
 
 typedef void (*PlatformIrqCallback)();
 void platformSetIrqCallback(PlatformIrqCallback cb);
+void platformConfigPinInput();
 void platformEnableIrqCallback();
 void platformDisableIrqCallback();
 

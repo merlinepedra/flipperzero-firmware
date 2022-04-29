@@ -356,6 +356,8 @@ bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_
 
     // print_rx(tx_rx);
 
+    time_start = DWT->CYCCNT;
+
     if(tx_rx->rx_bits != 64) {
         FURI_LOG_E(TAG, "Incorrect nr + ar");
         return false;
@@ -370,6 +372,10 @@ bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_
         // Don't send NACK, as tag don't send it
         return false;
     }
+
+    uint32_t check_time = DWT->CYCCNT - time_start;
+    time_start = DWT->CYCCNT;
+
     uint32_t ans = prng_successor(nonce, 96);
     uint8_t responce[4] = {};
     nfc_util_num2bytes(ans, 4, responce);
@@ -384,10 +390,17 @@ bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_
     tx_rx->tx_bits = 8 * 4;
     tx_rx->tx_rx_type = FuriHalNfcTxRxTransparent;
 
+    uint32_t resp_time = DWT->CYCCNT - time_start;
     if(!furi_hal_nfc_tx_rx(tx_rx, 500)) {
         FURI_LOG_E(TAG, "Error in 2nd data exchange");
         return false;
     }
+
+    print_delay(check_time, "Check:");
+    print_delay(resp_time, "Responce:");
+
+    // DELETE
+    // return false;
 
     time_start = DWT->CYCCNT;
     uint8_t decrypted_cmd[4] = {};

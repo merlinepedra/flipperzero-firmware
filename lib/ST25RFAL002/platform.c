@@ -28,15 +28,19 @@ void platformIrqThread() {
     }
 }
 
+void platformConfigPinInput() {
+    furi_hal_gpio_init(&pin, GpioModeInput, GpioPullDown, GpioSpeedVeryHigh);
+}
+
 void platformEnableIrqCallback() {
     // printf("ku\r\n");
-    furi_hal_gpio_init(&pin, GpioModeInterruptRise, GpioPullDown, GpioSpeedLow);
+    furi_hal_gpio_init(&pin, GpioModeInterruptRise, GpioPullDown, GpioSpeedVeryHigh);
     furi_hal_gpio_enable_int_callback(&pin);
 }
 
 void platformDisableIrqCallback() {
     // printf("hui\r\n");
-    furi_hal_gpio_init(&pin, GpioModeOutputOpenDrain, GpioPullNo, GpioSpeedLow);
+    furi_hal_gpio_init(&pin, GpioModeOutputOpenDrain, GpioPullNo, GpioSpeedVeryHigh);
     furi_hal_gpio_disable_int_callback(&pin);
 }
 

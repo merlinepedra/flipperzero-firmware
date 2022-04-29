@@ -156,11 +156,11 @@ void furi_hal_nfc_enter_transparent(FuriHalNfcTxRxContext* tx_rx) {
     // FURI_LOG_W("LISTEN START", "RETURN %d", ret);
     platformDisableIrqCallback();
 
-    st25r3916SetRegisterBits(
-        ST25R3916_REG_OP_CONTROL,
-        ST25R3916_REG_OP_CONTROL_en | ST25R3916_REG_OP_CONTROL_rx_en |
-            ST25R3916_REG_OP_CONTROL_en_fd_auto_efd);
-    st25r3916WriteRegister(ST25R3916_REG_IO_CONF1, 0x00);
+    // st25r3916SetRegisterBits(
+    //     ST25R3916_REG_OP_CONTROL,
+    //     ST25R3916_REG_OP_CONTROL_en | ST25R3916_REG_OP_CONTROL_rx_en |
+    //         ST25R3916_REG_OP_CONTROL_en_fd_auto_efd);
+    // st25r3916WriteRegister(ST25R3916_REG_IO_CONF1, 0x00);
 
     // furi_hal_nfc_dump_regs();
 
@@ -249,8 +249,10 @@ void furi_hal_nfc_exit_transparent() {
     LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
     LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
     furi_hal_spi_bus_handle_init(&furi_hal_spi_bus_handle_nfc);
-    clear_interrupts();
-    platformEnableIrqCallback();
+    // clear_interrupts();
+
+    // platformEnableIrqCallback();
+
     // furi_hal_gpio_write(&gpio_nfc_cs, false);
     // furi_hal_delay_ms(1);
     // furi_hal_gpio_write(&gpio_nfc_cs, true);
@@ -700,7 +702,7 @@ uint16_t furi_hal_nfc_bitstream_to_data_and_parity(
 }
 
 void print_del(uint32_t time, const char* message) {
-    FURI_LOG_D(TAG, "%s: %d", message, time / furi_hal_delay_instructions_per_microsecond());
+    // FURI_LOG_D(TAG, "%s: %d", message, time / furi_hal_delay_instructions_per_microsecond());
 }
 
 bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
@@ -708,6 +710,7 @@ bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeo
     uint32_t time_start = 0;
     // uint32_t time_end = 0;
     // static bool show = true;
+    bool ret = false;
 
     time_start = DWT->CYCCNT;
     furi_hal_nfc_enter_transparent(tx_rx);
@@ -721,10 +724,25 @@ bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeo
     st25r3916ExecuteCommand(ST25R3916_CMD_UNMASK_RECEIVE_DATA);
     uint32_t unmusk = DWT->CYCCNT - time_start;
 
+    furi_hal_gpio_init(&gpio_rfid_pull, GpioModeInput, GpioPullDown, GpioSpeedVeryHigh);
+
+    st25r3916ClearAndEnableInterrupts(ST25R3916_IRQ_MASK_RXE);
+
     time_start = DWT->CYCCNT;
-    uint32_t irq = st25r3916WaitForInterruptsTimed(ST25R3916_IRQ_MASK_RXE, timeout_ms);
+    // uint32_t irq = st25r3916WaitForInterruptsTimed(ST25R3916_IRQ_MASK_RXE, timeout_ms);
+
+    uint32_t irq = 0;
+    uint8_t rxe = 0;
+    while(true) {
+        if(furi_hal_gpio_read(&gpio_rfid_pull) == true) {
+            st25r3916ReadRegister(ST25R3916_REG_IRQ_MAIN, &rxe);
+            if(rxe & (1 << 4)) {
+                irq = 1;
+                break;
+            }
+        }
+    }
     uint32_t wait_isr = DWT->CYCCNT - time_start;
-    // uint32_t irq = 1;
     // furi_hal_delay_us(1000);
     print_del(enter_tr, "Enter tr");
     print_del(exit_tr, "Exit tr");
@@ -757,11 +775,16 @@ bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeo
         // }
         // show = !show;
 
-        return true;
+        ret = true;
     } else {
         FURI_LOG_E(TAG, "Timeout error");
-        return false;
+        ret = false;
     }
+
+    st25r3916ClearInterrupts();
+    platformEnableIrqCallback();
+
+    return ret;
 }
 
 bool furi_hal_nfc_tx_rx(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {

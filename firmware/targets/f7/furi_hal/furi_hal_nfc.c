@@ -699,14 +699,39 @@ uint16_t furi_hal_nfc_bitstream_to_data_and_parity(
     return curr_byte;
 }
 
+void print_del(uint32_t time, const char* message) {
+    FURI_LOG_D(TAG, "%s: %d", message, time / furi_hal_delay_instructions_per_microsecond());
+}
+
 bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeout_ms) {
     furi_assert(tx_rx);
-    furi_hal_nfc_enter_transparent(tx_rx);
-    furi_hal_nfc_exit_transparent();
+    uint32_t time_start = 0;
+    // uint32_t time_end = 0;
+    // static bool show = true;
 
+    time_start = DWT->CYCCNT;
+    furi_hal_nfc_enter_transparent(tx_rx);
+    uint32_t enter_tr = DWT->CYCCNT - time_start;
+
+    time_start = DWT->CYCCNT;
+    furi_hal_nfc_exit_transparent();
+    uint32_t exit_tr = DWT->CYCCNT - time_start;
+
+    time_start = DWT->CYCCNT;
     st25r3916ExecuteCommand(ST25R3916_CMD_UNMASK_RECEIVE_DATA);
+    uint32_t unmusk = DWT->CYCCNT - time_start;
+
+    time_start = DWT->CYCCNT;
     uint32_t irq = st25r3916WaitForInterruptsTimed(ST25R3916_IRQ_MASK_RXE, timeout_ms);
+    uint32_t wait_isr = DWT->CYCCNT - time_start;
+    // uint32_t irq = 1;
+    // furi_hal_delay_us(1000);
+    print_del(enter_tr, "Enter tr");
+    print_del(exit_tr, "Exit tr");
+    print_del(unmusk, "Unmusk read cmd");
+    print_del(wait_isr, "Wait ISR");
     if(irq) {
+        time_start = DWT->CYCCNT;
         uint8_t fifo_stat[2];
         st25r3916ReadMultipleRegisters(
             ST25R3916_REG_FIFO_STATUS1, fifo_stat, ST25R3916_FIFO_STATUS_LEN);
@@ -724,6 +749,14 @@ bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeo
         // printf("\r\n");
         tx_rx->rx_bits = len * 8;
         memcpy(tx_rx->rx_data, rx, len);
+
+        uint32_t process_fifo = DWT->CYCCNT - time_start;
+
+        // if(show) {
+        print_del(process_fifo, "Process FIFO");
+        // }
+        // show = !show;
+
         return true;
     } else {
         FURI_LOG_E(TAG, "Timeout error");

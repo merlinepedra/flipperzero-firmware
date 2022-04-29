@@ -2,6 +2,7 @@
 #include "nfca.h"
 #include "nfc_util.h"
 #include <st25r3916.h>
+#include <furi_hal_delay.h>
 
 // Algorithm from https://github.com/RfidResearchGroup/proxmark3.git
 
@@ -320,9 +321,15 @@ void print_rx(FuriHalNfcTxRxContext* tx_rx) {
     printf("\r\n");
 }
 
+void print_delay(uint32_t time, const char* message) {
+    // FURI_LOG_D(TAG, "%s: %d", message, time / furi_hal_delay_instructions_per_microsecond());
+}
+
 bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_rx) {
     furi_assert(emulator);
     furi_assert(tx_rx);
+    uint32_t time_start = 0;
+    uint32_t time_end = 0;
 
     // Get first frame
     tx_rx->tx_bits = 0;
@@ -382,11 +389,15 @@ bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_
         return false;
     }
 
+    time_start = DWT->CYCCNT;
     uint8_t decrypted_cmd[4] = {};
     for(uint8_t i = 0; i < 4; i++) {
         decrypted_cmd[i] = crypto1_byte(&emulator->crypto, 0, 0) ^ tx_rx->rx_data[i];
     }
+    time_end = DWT->CYCCNT;
+    print_delay(time_end - time_start, "Decrypt read");
 
+    time_start = DWT->CYCCNT;
     if(decrypted_cmd[0] != 0x30) {
         FURI_LOG_W(TAG, "Not read command");
         return false;
@@ -409,6 +420,8 @@ bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_
 
     tx_rx->tx_bits = 18 * 8;
     tx_rx->tx_rx_type = FuriHalNfcTxRxTransparent;
+    time_end = DWT->CYCCNT;
+    print_delay(time_end - time_start, "Encrypt block");
 
     if(!furi_hal_nfc_tx_rx(tx_rx, 500)) {
         FURI_LOG_E(TAG, "Error in Block emulation data exchange");

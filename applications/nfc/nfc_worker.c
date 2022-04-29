@@ -344,6 +344,8 @@ void nfc_worker_emulate_mifare_classic(NfcWorker* nfc_worker) {
             .type = MfClassicType1k,
         },
     };
+    // osThreadId_t id = osThreadGetId();
+    // osThreadSetPriority(id, osPriorityHigh);
     for(uint8_t i = 0; i < MF_CLASSIC_BLOCK_SIZE; i++) {
         emulator.data.block[0].value[i] = i;
     }

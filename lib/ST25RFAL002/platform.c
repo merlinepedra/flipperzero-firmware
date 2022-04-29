@@ -29,16 +29,19 @@ void platformIrqThread() {
 }
 
 void platformEnableIrqCallback() {
+    // printf("ku\r\n");
     furi_hal_gpio_init(&pin, GpioModeInterruptRise, GpioPullDown, GpioSpeedLow);
     furi_hal_gpio_enable_int_callback(&pin);
 }
 
 void platformDisableIrqCallback() {
+    // printf("hui\r\n");
     furi_hal_gpio_init(&pin, GpioModeOutputOpenDrain, GpioPullNo, GpioSpeedLow);
     furi_hal_gpio_disable_int_callback(&pin);
 }
 
 void platformSetIrqCallback(PlatformIrqCallback callback) {
+    // printf("expected once\r\n");
     platform_irq_callback = callback;
     platform_irq_thread_id = osThreadNew(platformIrqThread, NULL, &platform_irq_thread_attr);
     furi_hal_gpio_add_int_callback(&pin, nfc_isr, NULL);

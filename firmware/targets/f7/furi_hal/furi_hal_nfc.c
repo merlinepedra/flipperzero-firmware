@@ -29,6 +29,9 @@ void furi_hal_nfc_init() {
         FURI_LOG_I(TAG, "Init OK");
         furi_hal_gpio_init(&gpio_ext_pa7, GpioModeOutputPushPull, GpioPullNo, GpioSpeedHigh);
         furi_hal_gpio_write(&gpio_ext_pa7, true);
+        LL_GPIO_SetPinMode(gpio_ext_pa4.port, gpio_ext_pa4.pin, LL_GPIO_MODE_INPUT);
+        LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE4);
+        NVIC_DisableIRQ(EXTI4_IRQn);
     } else {
         FURI_LOG_W(TAG, "Initialization failed, RFAL returned: %d", ret);
     }
@@ -232,12 +235,57 @@ void furi_hal_nfc_enter_transparent(FuriHalNfcTxRxContext* tx_rx) {
     furi_hal_gpio_init(&gpio_nfc_cs, GpioModeInput, GpioPullUp, GpioSpeedLow);
     furi_hal_gpio_init(&gpio_spi_r_mosi, GpioModeOutputPushPull, GpioPullNo, GpioSpeedVeryHigh);
     furi_hal_gpio_write(&gpio_spi_r_mosi, false);
+
+    // Syncronize on exti event
+
+    uint32_t enable_tim = TIM2->CR1 | TIM_CR1_CEN;
+    dma_config.MemoryOrM2MDstAddress = (uint32_t)&enable_tim;
+    dma_config.PeriphOrM2MSrcAddress = (uint32_t) & (TIM2->CR1);
+    dma_config.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
+    dma_config.Mode = LL_DMA_MODE_NORMAL;
+    dma_config.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+    dma_config.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_NOINCREMENT;
+    dma_config.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_WORD;
+    dma_config.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
+    dma_config.NbData = 1;
+    dma_config.PeriphRequest = LL_DMAMUX_REQ_GENERATOR3;
+    dma_config.Priority = LL_DMA_PRIORITY_VERYHIGH;
+
+    LL_DMAMUX_SetRequestID(DMAMUX1, LL_DMAMUX_CHANNEL_3, LL_DMAMUX_REQ_GENERATOR3);
+    LL_DMAMUX_SetRequestSignalID(DMAMUX1, LL_DMAMUX_REQ_GEN_3, LL_DMAMUX_REQ_GEN_EXTI_LINE4);
+    LL_DMAMUX_SetRequestGenPolarity(DMAMUX1, LL_DMAMUX_REQ_GEN_3, LL_DMAMUX_REQ_GEN_POL_RISING);
+    LL_DMAMUX_SetGenRequestNb(DMAMUX1, LL_DMAMUX_REQ_GEN_3, 1);
+    // SYNC
+    LL_DMAMUX_SetSyncRequestNb(DMAMUX1, LL_DMAMUX_CHANNEL_3, 1);
+    LL_DMAMUX_SetSyncPolarity(DMAMUX1, LL_DMAMUX_CHANNEL_3, LL_DMAMUX_SYNC_POL_RISING);
+    LL_DMAMUX_SetSyncID(DMAMUX1, LL_DMAMUX_CHANNEL_3, LL_DMAMUX_SYNC_EXTI_LINE4);
+    LL_DMAMUX_EnableSync(DMAMUX1, LL_DMAMUX_CHANNEL_3);
+
+    LL_DMA_Init(DMA1, LL_DMA_CHANNEL_3, &dma_config);
+    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, 1);
+    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+    LL_DMAMUX_EnableRequestGen(DMAMUX1, LL_DMAMUX_REQ_GEN_3);
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_4);
+    LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_4);
+    LL_EXTI_EnableRisingTrig_0_31(LL_EXTI_LINE_4);
+
     // osDelay(10);
     furi_hal_gpio_write(&gpio_ext_pa7, false);
     LL_TIM_GenerateEvent_UPDATE(TIM2);
-    LL_TIM_EnableCounter(TIM2);
+    // LL_TIM_EnableCounter(TIM2);
+
+    while(!LL_DMA_IsActiveFlag_TC3(DMA1))
+        ;
+    // furi_hal_gpio_init(&gpio_ext_pa4, GpioModeInput, GpioPullUp, GpioSpeedVeryHigh);
+    LL_DMAMUX_DisableRequestGen(DMAMUX1, LL_DMAMUX_REQ_GEN_3);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_4);
+    LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_4);
+    LL_EXTI_DisableRisingTrig_0_31(LL_EXTI_LINE_4);
+
     while(!LL_DMA_IsActiveFlag_TC1(DMA1))
         ;
+
     furi_hal_gpio_write(&gpio_ext_pa7, true);
 
     LL_DMA_ClearFlag_TC1(DMA1);

@@ -149,7 +149,7 @@ void transparent_add_byte(uint16_t* buff, size_t* i, uint8_t byte, bool parity) 
 
 uint16_t transparent_buff[BUFF_SIZE] = {};
 
-uint32_t transparent_arr[] = {37, 37, 37, 37, 36, 37, 37, 36};
+uint32_t transparent_arr[] = {37, 37, 36, 37};
 
 size_t transparent_i = 0;
 

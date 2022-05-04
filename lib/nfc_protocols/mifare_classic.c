@@ -411,6 +411,7 @@ bool mf_classic_emulator(MfClassicEmulator* emulator, FuriHalNfcTxRxContext* tx_
     print_delay(time_end - time_start, "Decrypt read");
 
     time_start = DWT->CYCCNT;
+    // FURI_LOG_I(TAG, "Decrypted: %02X %02X", decrypted_cmd[0], decrypted_cmd[1]);
     if(decrypted_cmd[0] != 0x30) {
         FURI_LOG_W(TAG, "Not read command");
         return false;

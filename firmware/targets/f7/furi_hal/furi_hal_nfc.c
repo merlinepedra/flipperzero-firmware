@@ -733,6 +733,7 @@ bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeo
 
     uint32_t irq = 0;
     uint8_t rxe = 0;
+    uint32_t start = DWT->CYCCNT;
     while(true) {
         if(furi_hal_gpio_read(&gpio_rfid_pull) == true) {
             st25r3916ReadRegister(ST25R3916_REG_IRQ_MAIN, &rxe);
@@ -740,6 +741,11 @@ bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeo
                 irq = 1;
                 break;
             }
+        }
+        uint32_t timeout = DWT->CYCCNT - start;
+        if(timeout / furi_hal_delay_instructions_per_microsecond() > timeout_ms * 1000) {
+            FURI_LOG_D(TAG, "Interrupt waiting timeout");
+            goto exit;
         }
     }
     uint32_t wait_isr = DWT->CYCCNT - time_start;
@@ -781,6 +787,7 @@ bool furi_hal_nfc_tx_rx_transparent(FuriHalNfcTxRxContext* tx_rx, uint16_t timeo
         ret = false;
     }
 
+exit:
     st25r3916ClearInterrupts();
     platformEnableIrqCallback();
 

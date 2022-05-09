@@ -31,19 +31,18 @@ void storage_file_clear(StorageFile* obj) {
 /****************** storage data ******************/
 
 void storage_data_init(StorageData* storage) {
-    storage->mutex = osMutexNew(NULL);
-    furi_check(storage->mutex != NULL);
     storage->data = NULL;
     storage->status = StorageStatusNotReady;
     StorageFileList_init(storage->files);
 }
 
 bool storage_data_lock(StorageData* storage) {
-    return (osMutexAcquire(storage->mutex, osWaitForever) == osOK);
+    // we dont need to do locks as long as storage_data_lock is called in a single thread context
+    return true;
 }
 
 bool storage_data_unlock(StorageData* storage) {
-    return (osMutexRelease(storage->mutex) == osOK);
+    return true;
 }
 
 StorageStatus storage_data_status(StorageData* storage) {
@@ -61,6 +60,9 @@ const char* storage_data_status_text(StorageStatus status) {
     switch(status) {
     case StorageStatusOK:
         result = "ok";
+        break;
+    case StorageStatusWaiting:
+        result = "waiting";
         break;
     case StorageStatusNotReady:
         result = "not ready";

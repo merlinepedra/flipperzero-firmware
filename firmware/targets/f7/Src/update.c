@@ -7,7 +7,9 @@
 #include <flipper_format/flipper_format.h>
 
 #include <update_util/update_manifest.h>
-#include <lib/toolbox/path.h>
+#include <update_util/update_operation.h>
+#include <toolbox/path.h>
+#include <toolbox/crc32_calc.h>
 
 static FATFS* pfs = NULL;
 
@@ -27,7 +29,6 @@ static bool flipper_update_init() {
     furi_hal_delay_init();
 
     furi_hal_spi_init();
-    furi_hal_crc_init(false);
 
     MX_FATFS_Init();
     if(!hal_sd_detect()) {
@@ -62,17 +63,15 @@ static bool flipper_update_load_stage(const string_t work_dir, UpdateManifest* m
     uint32_t bytes_read = 0;
     const uint16_t MAX_READ = 0xFFFF;
 
-    furi_hal_crc_reset();
     uint32_t crc = 0;
     do {
         uint16_t size_read = 0;
         if(f_read(&file, img + bytes_read, MAX_READ, &size_read) != FR_OK) {
             break;
         }
-        crc = furi_hal_crc_feed(img + bytes_read, size_read);
+        crc = crc32_calc_buffer(crc, img + bytes_read, size_read);
         bytes_read += size_read;
     } while(bytes_read == MAX_READ);
-    furi_hal_crc_reset();
 
     do {
         if((bytes_read != stat.fsize) || (crc != manifest->staged_loader_crc)) {
@@ -103,7 +102,7 @@ static bool flipper_update_load_stage(const string_t work_dir, UpdateManifest* m
 
 static bool flipper_update_get_work_directory(string_t out_dir) {
     const uint32_t update_index = furi_hal_rtc_get_register(FuriHalRtcRegisterUpdateFolderFSIndex);
-    if(update_index == 0) {
+    if(update_index == UPDATE_OPERATION_ROOT_DIR_PACKAGE_MAGIC) {
         string_set(out_dir, UPDATE_DIR_DEFAULT_REL_PATH);
         return true;
     }

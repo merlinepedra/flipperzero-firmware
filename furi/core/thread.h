@@ -188,7 +188,10 @@ uint32_t furi_thread_flags_get(void);
 
 uint32_t furi_thread_flags_wait(uint32_t flags, uint32_t options, uint32_t timeout);
 
-uint32_t furi_thread_enumerate(FuriThreadId* thread_array, uint32_t array_items);
+uint32_t furi_thread_enumerate(
+    FuriThreadId* thread_array,
+    uint32_t* runtime_array,
+    const uint32_t array_items);
 
 const char* furi_thread_get_name(FuriThreadId thread_id);
 

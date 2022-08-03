@@ -256,18 +256,35 @@ void cli_command_ps(Cli* cli, string_t args, void* context) {
 
     const uint8_t threads_num_max = 32;
     FuriThreadId threads_ids[threads_num_max];
-    uint8_t thread_num = furi_thread_enumerate(threads_ids, threads_num_max);
+    uint32_t runtime[threads_num_max];
+
+    uint8_t thread_num = furi_thread_enumerate(threads_ids, runtime, threads_num_max);
     printf(
-        "%-20s %-14s %-8s %-8s %s\r\n", "Name", "Stack start", "Heap", "Stack", "Stack min free");
+        "%-20s %-14s %-8s %-8s %s %s\r\n",
+        "Name",
+        "Stack start",
+        "Heap",
+        "Stack",
+        "Stack WM",
+        "Runtime");
+
     for(uint8_t i = 0; i < thread_num; i++) {
         TaskControlBlock* tcb = (TaskControlBlock*)threads_ids[i];
+
+        float runtime_percent = 0;
+        if(runtime[i] != 0) {
+            runtime_percent = (float)tcb->ulRunTimeCounter / runtime[i] * 100;
+            runtime_percent = ceilf(runtime_percent * 1000) / 1000;
+        }
+
         printf(
-            "%-20s 0x%-12lx %-8d %-8ld %-8ld\r\n",
+            "%-20s 0x%-12lx %-8d %-8ld %-8ld %02.3f%% \r\n",
             furi_thread_get_name(threads_ids[i]),
             (uint32_t)tcb->pxStack,
             memmgr_heap_get_thread_memory(threads_ids[i]),
             (uint32_t)(tcb->pxEndOfStack - tcb->pxStack + 1) * sizeof(StackType_t),
-            furi_thread_get_stack_space(threads_ids[i]));
+            furi_thread_get_stack_space(threads_ids[i]),
+            (double)runtime_percent);
     }
     printf("\r\nTotal: %d", thread_num);
 }

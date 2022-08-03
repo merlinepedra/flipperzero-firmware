@@ -355,8 +355,11 @@ uint32_t furi_thread_flags_wait(uint32_t flags, uint32_t options, uint32_t timeo
     return (rflags);
 }
 
-uint32_t furi_thread_enumerate(FuriThreadId* thread_array, uint32_t array_items) {
-    uint32_t i, count;
+uint32_t furi_thread_enumerate(
+    FuriThreadId* thread_array,
+    uint32_t* runtime_array,
+    const uint32_t array_items) {
+    uint32_t i, count, runtime;
     TaskStatus_t* task;
 
     if(FURI_IS_IRQ_MODE() || (thread_array == NULL) || (array_items == 0U)) {
@@ -368,10 +371,11 @@ uint32_t furi_thread_enumerate(FuriThreadId* thread_array, uint32_t array_items)
         task = pvPortMalloc(count * sizeof(TaskStatus_t));
 
         if(task != NULL) {
-            count = uxTaskGetSystemState(task, count, NULL);
+            count = uxTaskGetSystemState(task, count, &runtime);
 
             for(i = 0U; (i < count) && (i < array_items); i++) {
                 thread_array[i] = (FuriThreadId)task[i].xHandle;
+                runtime_array[i] = runtime;
             }
             count = i;
         }

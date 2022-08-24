@@ -1,0 +1,13 @@
+App(
+    appid="elk_js",
+    name="Java Script",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="elk_js_app",
+    requires=[
+        "gui",
+        "dialogs",
+        "notification",
+    ],
+    stack_size=4 * 1024,
+    order=20,
+)

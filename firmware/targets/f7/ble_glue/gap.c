@@ -369,6 +369,58 @@ static void gap_init_svc(Gap* gap) {
     aci_gap_configure_whitelist();
 }
 
+static uint8_t add_beacon_data[17] = {
+    16, /*< Length. */
+    AD_TYPE_SERVICE_DATA, /*< Service Data data type value. */
+    0xAA,
+    0xFE, /*< 16-bit Eddystone UUID. */
+    0x10, /*< URL frame type. */
+    0x00, /*< Tx Power - Ranging data. */
+    0x02, /*< URL Scheme Prefix is http://www. */
+    0x77,
+    0x77,
+    0x77,
+    0x2E,
+    0x73,
+    0x74,
+    0x2E,
+    0x63,
+    0x6F,
+    0x6D, /*< www.st.com */
+};
+
+static uint8_t iBeaconOwnAdress[6] = {0x03, 0x03, 0x03, 0x03, 0x03, 0x03};
+
+static void beacon_start() {
+    const uint16_t min_interval = 0x180; // 240 ms
+    const uint16_t max_interval = 0x19A; // 256 ms
+
+    tBleStatus ret = aci_gap_additional_beacon_start(
+        min_interval, max_interval, 0x07, PUBLIC_ADDR, iBeaconOwnAdress, CFG_TX_POWER);
+
+    if(ret == BLE_STATUS_SUCCESS) {
+        FURI_LOG_I(TAG, "aci_gap_additional_beacon_start");
+    } else {
+        FURI_LOG_E(TAG, "aci_gap_additional_beacon_start, %d", ret);
+    }
+
+    ret = aci_gap_additional_beacon_set_data(sizeof(add_beacon_data), (uint8_t*)add_beacon_data);
+    if(ret == BLE_STATUS_SUCCESS) {
+        FURI_LOG_I(TAG, "aci_gap_additional_beacon_set_data");
+    } else {
+        FURI_LOG_E(TAG, "aci_gap_additional_beacon_set_data, %d \n", ret);
+    }
+}
+
+static void beacon_stop() {
+    tBleStatus ret = aci_gap_additional_beacon_stop();
+    if(ret == BLE_STATUS_SUCCESS) {
+        FURI_LOG_I(TAG, "aci_gap_additional_beacon_set_data");
+    } else {
+        FURI_LOG_E(TAG, "aci_gap_additional_beacon_set_data, %d \n", ret);
+    }
+}
+
 static void gap_advertise_start(GapState new_state) {
     tBleStatus status;
     uint16_t min_interval;
@@ -386,6 +438,9 @@ static void gap_advertise_start(GapState new_state) {
 
     if((new_state == GapStateAdvLowPower) &&
        ((gap->state == GapStateAdvFast) || (gap->state == GapStateAdvLowPower))) {
+        // Stop additional_beacon
+        beacon_stop();
+
         // Stop advertising
         status = aci_gap_set_non_discoverable();
         if(status) {
@@ -394,6 +449,9 @@ static void gap_advertise_start(GapState new_state) {
             FURI_LOG_D(TAG, "set_non_discoverable success");
         }
     }
+    // Start additional_beacon
+    beacon_start();
+
     // Configure advertising
     status = aci_gap_set_discoverable(
         ADV_IND,
@@ -430,6 +488,9 @@ static void gap_advertise_stop() {
         }
         // Stop advertising
         furi_timer_stop(gap->advertise_timer);
+
+        // Stop additional_beacon
+        beacon_stop();
         ret = aci_gap_set_non_discoverable();
         if(ret != BLE_STATUS_SUCCESS) {
             FURI_LOG_E(TAG, "set_non_discoverable failed %d", ret);

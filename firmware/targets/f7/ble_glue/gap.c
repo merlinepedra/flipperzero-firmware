@@ -415,9 +415,9 @@ static void beacon_start() {
 static void beacon_stop() {
     tBleStatus ret = aci_gap_additional_beacon_stop();
     if(ret == BLE_STATUS_SUCCESS) {
-        FURI_LOG_I(TAG, "aci_gap_additional_beacon_set_data");
+        FURI_LOG_I(TAG, "aci_gap_additional_beacon_stop");
     } else {
-        FURI_LOG_E(TAG, "aci_gap_additional_beacon_set_data, %d \n", ret);
+        FURI_LOG_E(TAG, "aci_gap_additional_beacon_stop, %d \n", ret);
     }
 }
 

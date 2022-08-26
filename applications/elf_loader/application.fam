@@ -8,4 +8,5 @@ App(
     stack_size=int(1.5 * 1024),
     icon="A_Debug_14",
     order=0,
+    sdk_headers=["elf_cpp/elf_hashtable.h"],
 )

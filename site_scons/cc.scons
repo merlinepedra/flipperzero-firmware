@@ -24,7 +24,8 @@ ENV.AppendUnique(
         "-Wextra",
         "-Werror",
         "-Wno-address-of-packed-member",
-        "-Wredundant-decls",
+        # "-Wredundant-decls",
+        "-Wno-unused-function",
         "-Wdouble-promotion",
         "-fdata-sections",
         "-ffunction-sections",
@@ -34,6 +35,8 @@ ENV.AppendUnique(
         "-g",
         # "-Wno-stringop-overread",
         # "-Wno-stringop-overflow",
+        "-DCS_PLATFORM=16",
+        "-DMJS_EXPOSE_PRIVATE",
     ],
     CPPDEFINES=[
         "_GNU_SOURCE",

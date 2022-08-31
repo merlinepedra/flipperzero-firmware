@@ -1,13 +1,13 @@
 App(
-    appid="elk_js",
-    name="Elk JS",
+    appid="m_js",
+    name="M JS",
     apptype=FlipperAppType.PLUGIN,
-    entry_point="elk_js_app",
+    entry_point="m_js_app",
     requires=[
         "gui",
         "dialogs",
         "notification",
     ],
-    stack_size=4 * 1024,
-    order=1,
+    stack_size=16 * 1024,
+    order=0,
 )

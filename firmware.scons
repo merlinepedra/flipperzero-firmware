@@ -166,6 +166,7 @@ sources = [apps_c]
 # Gather sources only from app folders in current configuration
 for app_folder in fwenv["APPBUILD"].get_builtin_app_folders():
     sources += fwenv.GlobRecursive("*.c*", os.path.join("applications", app_folder))
+    sources += fwenv.GlobRecursive("*.S", os.path.join("applications", app_folder))
 
 
 fwenv.AppendUnique(

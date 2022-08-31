@@ -79,7 +79,7 @@ FIRMWARE_APPS = {
         "system_settings",
         "about",
         # Plugins
-        # "basic_plugins",
+        "basic_plugins",
         # Debug
         # "debug_apps",
     ],
